@@ -56,6 +56,22 @@ A coluna `quality_flag` sinaliza a cobertura valida de LST em area terrestre:
 
 Esse alerta nao entra no calculo do indice nesta etapa.
 
+## Setores censitarios como camada complementar
+
+Os bairros seguem como unidade principal do MVP, pois oferecem uma escala mais
+estavel para comunicacao publica e comparacao intraurbana.
+
+Os setores censitarios serao tratados como camada complementar de maior detalhe.
+Essa escala pode revelar variacoes internas aos bairros, mas tambem exige mais
+cuidado metodologico: muitos setores sao pequenos em relacao a resolucao
+Landsat de 30 m, o que pode gerar estatisticas instaveis quando ha poucos
+pixels validos por setor.
+
+A interpretacao setorial dependera de flags de qualidade, especialmente
+cobertura valida de LST, area terrestre analisavel e numero aproximado de pixels
+Landsat por setor. Nesta etapa, ainda nao ha processamento socioeconomico
+censitario.
+
 ## Observacao
 
 O UTVI e uma metrica exploratoria para priorizacao inicial e diagnostico. Ele ainda nao incorpora exposicao populacional, sensibilidade socioeconomica ou validacao estatistica externa.
