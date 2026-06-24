@@ -25,12 +25,12 @@ ENV/
 .ipynb_checkpoints/
 
 # Data and heavy geospatial outputs
-data/raw/*
-data/interim/*
-data/processed/*
-outputs/figures/*
-outputs/maps/*
-outputs/tables/*
+data/raw/**
+data/interim/**
+data/processed/**
+outputs/figures/**
+outputs/maps/**
+outputs/tables/**
 
 !data/raw/README.md
 !data/interim/README.md
@@ -56,7 +56,11 @@ outputs/tables/*
 *.parquet
 *.geoparquet
 
+# Lightweight processed tabular outputs used by the MVP/dashboard
+!data/processed/poa_bairros_utvi.csv
+!data/processed/poa_bairros_utvi.parquet
+!outputs/tables/poa_bairros_ranking_utvi_top20.csv
+
 # OS files
 .DS_Store
 Thumbs.db
-
