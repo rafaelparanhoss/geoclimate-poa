@@ -59,6 +59,8 @@ outputs/tables/**
 # Lightweight processed tabular outputs used by the MVP/dashboard
 !data/processed/poa_bairros_utvi.csv
 !data/processed/poa_bairros_utvi.parquet
+!data/processed/poa_bairros_utvi.geojson
+!data/processed/poa_bairros_utvi.geoparquet
 !outputs/tables/poa_bairros_ranking_utvi_top20.csv
 
 # OS files
