@@ -3,11 +3,9 @@ geopandas
 shapely
 pyproj
 pyogrio
-duckdb
 pyarrow
 streamlit
 plotly
 folium
+branca
 streamlit-folium
-pyyaml
-
