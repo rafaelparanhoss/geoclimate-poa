@@ -61,7 +61,12 @@ outputs/tables/**
 !data/processed/poa_bairros_utvi.parquet
 !data/processed/poa_bairros_utvi.geojson
 !data/processed/poa_bairros_utvi.geoparquet
+!data/processed/poa_setores_utvi.csv
+!data/processed/poa_setores_utvi.parquet
+!data/processed/poa_setores_utvi.geojson
+!data/processed/poa_setores_utvi.geoparquet
 !outputs/tables/poa_bairros_ranking_utvi_top20.csv
+!outputs/tables/poa_setores_ranking_utvi_top50.csv
 
 # OS files
 .DS_Store

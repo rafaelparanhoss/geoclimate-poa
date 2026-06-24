@@ -69,8 +69,17 @@ pixels validos por setor.
 
 A interpretacao setorial dependera de flags de qualidade, especialmente
 cobertura valida de LST, area terrestre analisavel e numero aproximado de pixels
-Landsat por setor. Nesta etapa, ainda nao ha processamento socioeconomico
-censitario.
+Landsat por setor. O ranking principal setorial usa apenas setores com
+`quality_flag_setor == "ok"`.
+
+As flags setoriais seguem esta prioridade:
+
+- `invalid_no_lst`: setor sem LST valida; nao entra no ranking principal.
+- `caution_low_lst_valid`: setor com baixa cobertura valida de LST.
+- `caution_small_sector`: setor pequeno ou com poucos pixels Landsat.
+- `ok`: setor apto ao ranking exploratorio.
+
+Nesta etapa, ainda nao ha processamento socioeconomico censitario.
 
 ## Observacao
 
