@@ -31,16 +31,31 @@ são usados pelo dashboard.
 
 ## Abas
 
-- **Visão geral:** título do projeto, métricas sintéticas, mapa coroplético por
-  bairro e ranking top 10 por UTVI.
-- **Bairros:** mapa por variável selecionada, tabela filtrável, dispersões entre
-  NDVI, urbanização e LST, e barras top 15 por UTVI.
-- **Setores censitários:** camada complementar com filtro por bairro, filtro por
-  qualidade e ranking top 20 de setores válidos.
-- **Indicadores:** gráficos comparativos simples para bairros e distribuição do
-  UTVI por bairros e setores `ok`.
-- **Metodologia:** resumo do período, fontes, fórmula do índice, flags de
-  qualidade e limitações de interpretação.
+- **Visão geral:** narrativa inicial, pergunta central, métricas sintéticas,
+  mapa grande de UTVI por bairro e ranking top 10.
+- **Explorar bairros:** mapa por variável selecionada, tooltip amigável,
+  tabela resumida, download CSV e ranking top 15 por UTVI.
+- **Explorar setores:** camada complementar com filtro por bairro,
+  `quality_flag_setor` e classe UTVI. Por padrão, mostra apenas setores `ok`.
+- **Indicadores:** gráficos sintéticos para LST x NDVI, UTVI x área urbana,
+  ranking top 15 de bairros e distribuição do UTVI nos setores `ok`.
+- **Metodologia:** explicação em expanders sobre dados usados, fórmula,
+  limitações e interpretação das quality flags.
+
+## Labels e tooltips
+
+A interface usa labels amigáveis para as principais variáveis:
+
+- `utvi_exploratory` e `utvi_setor_exploratory`: **UTVI**
+- `LST_C_median_mean`: **Temperatura de superfície mediana média (°C)**
+- `LST_C_p75_mean`: **Temperatura de superfície p75 média (°C)**
+- `NDVI_median_mean`: **Vegetação média (NDVI)**
+- `NDBI_median_mean`: **Urbanização espectral média (NDBI)**
+- `pct_urbana_land`: **Área urbana (%)**
+- `pct_lst_valid_land`: **LST válida (%)**
+
+Os tooltips dos mapas mostram apenas os campos principais, com valores
+arredondados para leitura rápida.
 
 ## Unidade espacial
 

@@ -46,6 +46,39 @@ def _fit_bounds(base_map: folium.Map, data: gpd.GeoDataFrame) -> None:
     base_map.fit_bounds([[miny, minx], [maxy, maxx]], padding=(12, 12))
 
 
+def _format_tooltip_value(field: str, value: object) -> object:
+    """Format tooltip values without changing the analytical columns."""
+    if _is_missing(value):
+        return "n/d"
+    if field in ["utvi_exploratory", "utvi_setor_exploratory"]:
+        return f"{float(value):.3f}"
+    if field.startswith("LST_"):
+        return f"{float(value):.1f}"
+    if field.startswith("pct_") or field.startswith("area_"):
+        return f"{float(value):.1f}"
+    if "NDVI" in field or "NDBI" in field or "MNDWI" in field:
+        return f"{float(value):.3f}"
+    return value
+
+
+def _add_tooltip_display_columns(
+    data: gpd.GeoDataFrame,
+    fields: list[str],
+) -> tuple[gpd.GeoDataFrame, list[str]]:
+    """Create formatted tooltip columns for the requested fields."""
+    display_data = data.copy()
+    display_fields: list[str] = []
+
+    for field in fields:
+        display_field = f"tooltip_{field}"
+        display_data[display_field] = display_data[field].map(
+            lambda value, current_field=field: _format_tooltip_value(current_field, value)
+        )
+        display_fields.append(display_field)
+
+    return display_data, display_fields
+
+
 def make_choropleth_map(
     data: gpd.GeoDataFrame,
     variable: str,
@@ -59,6 +92,9 @@ def make_choropleth_map(
         raise ValueError(f"Variável ausente na camada espacial: {variable}")
 
     map_data = data.copy()
+    tooltip_fields = [field for field in tooltip_fields if field in map_data.columns]
+    map_data, display_tooltip_fields = _add_tooltip_display_columns(map_data, tooltip_fields)
+
     if map_data.crs and map_data.crs.to_epsg() != 4326:
         map_data = map_data.to_crs(epsg=4326)
 
@@ -101,9 +137,9 @@ def make_choropleth_map(
 
     aliases = tooltip_aliases or {}
     tooltip = folium.GeoJsonTooltip(
-        fields=tooltip_fields,
-        aliases=[aliases.get(field, field) for field in tooltip_fields],
-        localize=True,
+        fields=display_tooltip_fields,
+        aliases=[aliases.get(field.replace("tooltip_", ""), field) for field in display_tooltip_fields],
+        localize=False,
         sticky=False,
         labels=True,
         style=(

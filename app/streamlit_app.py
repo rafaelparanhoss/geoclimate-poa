@@ -63,21 +63,21 @@ SETORES_REQUIRED_COLUMNS = [
 ]
 
 BAIRROS_MAP_VARIABLES = {
-    "utvi_exploratory": "UTVI exploratório",
-    "LST_C_median_mean": "LST mediana média (°C)",
-    "LST_C_p75_mean": "LST p75 média (°C)",
-    "NDVI_median_mean": "NDVI mediano médio",
-    "NDBI_median_mean": "NDBI mediano médio",
-    "pct_urbana_land": "% urbano em área terrestre",
-    "pct_lst_valid_land": "% LST válida em terra",
+    "utvi_exploratory": "UTVI",
+    "LST_C_median_mean": "Temperatura de superfície mediana média (°C)",
+    "LST_C_p75_mean": "Temperatura de superfície p75 média (°C)",
+    "NDVI_median_mean": "Vegetação média (NDVI)",
+    "NDBI_median_mean": "Urbanização espectral média (NDBI)",
+    "pct_urbana_land": "Área urbana (%)",
+    "pct_lst_valid_land": "LST válida (%)",
 }
 
 SETORES_MAP_VARIABLES = {
-    "utvi_setor_exploratory": "UTVI setorial exploratório",
-    "LST_C_median_mean": "LST mediana média (°C)",
-    "NDVI_median_mean": "NDVI mediano médio",
-    "pct_urbana_land": "% urbano em área terrestre",
-    "pct_lst_valid_land": "% LST válida em terra",
+    "utvi_setor_exploratory": "UTVI",
+    "LST_C_median_mean": "Temperatura de superfície mediana média (°C)",
+    "NDVI_median_mean": "Vegetação média (NDVI)",
+    "pct_urbana_land": "Área urbana (%)",
+    "pct_lst_valid_land": "LST válida (%)",
 }
 
 LABELS = {
@@ -85,12 +85,62 @@ LABELS = {
     **SETORES_MAP_VARIABLES,
     "bairro_nome_title": "Bairro",
     "NM_BAIRRO": "Bairro",
-    "CD_SETOR": "Setor censitário",
+    "CD_SETOR": "CD_SETOR",
     "utvi_class": "Classe UTVI",
     "utvi_setor_class": "Classe UTVI",
     "quality_flag": "Qualidade",
-    "quality_flag_setor": "Qualidade",
+    "quality_flag_setor": "quality_flag_setor",
+    "utvi_rank": "Ranking UTVI",
+    "utvi_setor_rank": "Ranking UTVI",
 }
+
+BAIRROS_TOOLTIP_FIELDS = [
+    "bairro_nome_title",
+    "utvi_exploratory",
+    "utvi_class",
+    "LST_C_median_mean",
+    "NDVI_median_mean",
+    "pct_urbana_land",
+    "quality_flag",
+]
+
+SETORES_TOOLTIP_FIELDS = [
+    "CD_SETOR",
+    "bairro_nome_title",
+    "utvi_setor_exploratory",
+    "utvi_setor_class",
+    "LST_C_median_mean",
+    "NDVI_median_mean",
+    "pct_urbana_land",
+    "quality_flag_setor",
+]
+
+BAIRROS_TABLE_COLUMNS = [
+    "utvi_rank",
+    "bairro_nome_title",
+    "utvi_exploratory",
+    "utvi_class",
+    "LST_C_median_mean",
+    "LST_C_p75_mean",
+    "NDVI_median_mean",
+    "NDBI_median_mean",
+    "pct_urbana_land",
+    "pct_lst_valid_land",
+    "quality_flag",
+]
+
+SETORES_TABLE_COLUMNS = [
+    "utvi_setor_rank",
+    "CD_SETOR",
+    "bairro_nome_title",
+    "utvi_setor_exploratory",
+    "utvi_setor_class",
+    "LST_C_median_mean",
+    "NDVI_median_mean",
+    "pct_urbana_land",
+    "pct_lst_valid_land",
+    "quality_flag_setor",
+]
 
 
 def format_metric(value: object, decimals: int = 2, suffix: str = "") -> str:
@@ -150,12 +200,46 @@ def filter_by_bairros(data: pd.DataFrame, selected_bairros: list[str]) -> pd.Dat
     return data[data["bairro_nome_title"].isin(selected_bairros)].copy()
 
 
+def round_for_display(data: pd.DataFrame) -> pd.DataFrame:
+    """Round visible numeric columns without changing the stored data."""
+    display = data.copy()
+    for column in display.columns:
+        if column in ["utvi_exploratory", "utvi_setor_exploratory"]:
+            display[column] = pd.to_numeric(display[column], errors="coerce").round(3)
+        elif column.startswith("LST_") or column.startswith("pct_"):
+            display[column] = pd.to_numeric(display[column], errors="coerce").round(1)
+        elif "NDVI" in column or "NDBI" in column or "MNDWI" in column:
+            display[column] = pd.to_numeric(display[column], errors="coerce").round(3)
+    return display
+
+
+def friendly_table(data: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Select, round and rename table columns for the dashboard."""
+    selected = data[existing_columns(data, columns)].copy()
+    selected = selected.drop(columns=["geometry"], errors="ignore")
+    selected = round_for_display(selected)
+    return selected.rename(columns=LABELS)
+
+
+def download_table(data: pd.DataFrame, filename: str, label: str) -> None:
+    """Render a CSV download button for a filtered table."""
+    export = data.drop(columns=["geometry"], errors="ignore").copy()
+    csv = export.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label=label,
+        data=csv,
+        file_name=filename,
+        mime="text/csv",
+    )
+
+
 def render_map(
     data: gpd.GeoDataFrame,
     variable: str,
     variable_label: str,
     tooltip_fields: list[str],
     map_key: str,
+    height: int = 590,
 ) -> None:
     """Render a Folium choropleth in Streamlit."""
     if st_folium is None:
@@ -175,7 +259,7 @@ def render_map(
     st_folium(
         folium_map,
         width=1400,
-        height=560,
+        height=height,
         returned_objects=[],
         key=map_key,
     )
@@ -185,11 +269,15 @@ def render_overview(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | None)
     """Render the dashboard overview tab."""
     st.title("GeoClimate POA")
     st.subheader("Vulnerabilidade térmica urbana em Porto Alegre")
-    st.write(
-        "Dashboard exploratório para analisar áreas que combinam maior temperatura "
-        "de superfície, menor vegetação, maior urbanização e maior intensidade "
-        "espectral de área construída. O índice integra LST, NDVI, NDBI e "
-        "percentual urbano em área terrestre."
+    st.markdown(
+        """
+        **Pergunta central:** quais áreas combinam maior temperatura de superfície,
+        menor vegetação e maior urbanização?
+
+        Este painel organiza os resultados por bairros e, como camada complementar,
+        por setores censitários. O índice UTVI é exploratório e ajuda a comparar
+        padrões espaciais de calor de superfície no verão de 2023/2024.
+        """
     )
 
     top_utvi = bairros.sort_values("utvi_exploratory", ascending=False).iloc[0]
@@ -201,61 +289,57 @@ def render_overview(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | None)
     )
 
     metric_cols = st.columns(5)
-    metric_cols[0].metric("Bairros", f"{len(bairros):,}".replace(",", "."))
-    metric_cols[1].metric(
-        "Maior UTVI",
+    metric_cols[0].metric(
+        "Bairro com maior UTVI",
         str(top_utvi["bairro_nome_title"]),
-        format_metric(top_utvi["utvi_exploratory"]),
+        format_metric(top_utvi["utvi_exploratory"], decimals=3),
     )
-    metric_cols[2].metric(
-        "Maior LST mediana",
-        format_metric(top_lst["LST_C_median_mean"], suffix=" °C"),
+    metric_cols[1].metric(
+        "Maior temperatura média",
         str(top_lst["bairro_nome_title"]),
+        format_metric(top_lst["LST_C_median_mean"], decimals=1, suffix=" °C"),
     )
+    metric_cols[2].metric("Bairros", f"{len(bairros):,}".replace(",", "."))
     metric_cols[3].metric(
-        "Média municipal UTVI",
-        format_metric(bairros["utvi_exploratory"].mean()),
-    )
-    metric_cols[4].metric(
         "Setores válidos",
         "n/d" if valid_setores is None else f"{valid_setores:,}".replace(",", "."),
     )
+    metric_cols[4].metric(
+        "Média do UTVI",
+        format_metric(bairros["utvi_exploratory"].mean(), decimals=3),
+    )
 
-    st.markdown("### Mapa por bairro")
+    st.markdown("### Mapa de UTVI por bairro")
     render_map(
         bairros,
         variable="utvi_exploratory",
-        variable_label=BAIRROS_MAP_VARIABLES["utvi_exploratory"],
-        tooltip_fields=[
-            "bairro_nome_title",
-            "utvi_exploratory",
-            "utvi_class",
-            "LST_C_median_mean",
-            "NDVI_median_mean",
-            "pct_urbana_land",
-            "quality_flag",
-        ],
+        variable_label="UTVI",
+        tooltip_fields=BAIRROS_TOOLTIP_FIELDS,
         map_key="overview_bairros_utvi_map",
+        height=620,
     )
 
-    st.markdown("### Top 10 bairros por UTVI")
+    st.markdown("### Ranking top 10 bairros")
     top10 = bairros.sort_values("utvi_exploratory", ascending=False).head(10)
     st.plotly_chart(
         make_bar_ranking(
             top10,
             label_col="bairro_nome_title",
             value_col="utvi_exploratory",
-            title="Ranking de bairros",
+            title="Bairros com maior UTVI",
             labels=LABELS,
             hover_data=["LST_C_median_mean", "NDVI_median_mean", "pct_urbana_land", "quality_flag"],
         ),
         width="stretch",
+        key="overview_top10_bairros_chart",
     )
 
 
 def render_bairros(bairros: gpd.GeoDataFrame, selected_bairros: list[str]) -> None:
-    """Render the neighborhood analysis tab."""
-    st.header("Bairros")
+    """Render the neighborhood exploration tab."""
+    st.header("Explorar bairros")
+    st.caption("Bairros são a unidade principal do MVP e a escala recomendada para leitura inicial.")
+
     data = filter_by_bairros(bairros, selected_bairros)
 
     variable = st.selectbox(
@@ -268,76 +352,28 @@ def render_bairros(bairros: gpd.GeoDataFrame, selected_bairros: list[str]) -> No
         data,
         variable=variable,
         variable_label=BAIRROS_MAP_VARIABLES[variable],
-        tooltip_fields=[
-            "bairro_nome_title",
-            variable,
-            "utvi_exploratory",
-            "utvi_class",
-            "LST_C_median_mean",
-            "NDVI_median_mean",
-            "pct_urbana_land",
-            "quality_flag",
-        ],
+        tooltip_fields=BAIRROS_TOOLTIP_FIELDS,
         map_key=f"bairros_{variable}_map",
     )
 
-    st.markdown("### Tabela de bairros")
-    query = st.text_input("Filtrar tabela por nome do bairro", key="bairros_query")
+    st.markdown("### Ranking e tabela")
+    query = st.text_input("Filtrar por nome do bairro", key="bairros_query")
     table_data = data.copy()
     if query:
         table_data = table_data[
             table_data["bairro_nome_title"].str.contains(query, case=False, na=False)
         ]
-    bairro_table_columns = [
-        "utvi_rank",
-        "bairro_nome_title",
-        "utvi_exploratory",
-        "utvi_class",
-        "quality_flag",
-        "LST_C_median_mean",
-        "LST_C_p75_mean",
-        "NDVI_median_mean",
-        "NDBI_median_mean",
-        "pct_urbana_land",
-        "pct_lst_valid_land",
-    ]
+    table_data = table_data.sort_values("utvi_exploratory", ascending=False)
     st.dataframe(
-        table_data[existing_columns(table_data, bairro_table_columns)].sort_values(
-            "utvi_exploratory", ascending=False
-        ),
+        friendly_table(table_data, BAIRROS_TABLE_COLUMNS),
         width="stretch",
         hide_index=True,
     )
-
-    left, right = st.columns(2)
-    with left:
-        st.plotly_chart(
-            make_scatter(
-                data,
-                x="NDVI_median_mean",
-                y="LST_C_median_mean",
-                hover_name="bairro_nome_title",
-                color="utvi_class",
-                labels=LABELS,
-                hover_data=["utvi_exploratory", "pct_urbana_land", "quality_flag"],
-                title="NDVI × LST por bairro",
-            ),
-            width="stretch",
-        )
-    with right:
-        st.plotly_chart(
-            make_scatter(
-                data,
-                x="pct_urbana_land",
-                y="LST_C_median_mean",
-                hover_name="bairro_nome_title",
-                color="utvi_class",
-                labels=LABELS,
-                hover_data=["utvi_exploratory", "NDVI_median_mean", "quality_flag"],
-                title="% urbano × LST por bairro",
-            ),
-            width="stretch",
-        )
+    download_table(
+        table_data[existing_columns(table_data, BAIRROS_TABLE_COLUMNS)],
+        "geoclimate_poa_bairros_filtrados.csv",
+        "Baixar tabela de bairros em CSV",
+    )
 
     st.plotly_chart(
         make_bar_ranking(
@@ -350,15 +386,17 @@ def render_bairros(bairros: gpd.GeoDataFrame, selected_bairros: list[str]) -> No
             hover_data=["LST_C_median_mean", "NDVI_median_mean", "pct_urbana_land", "quality_flag"],
         ),
         width="stretch",
+        key="bairros_top15_chart",
     )
 
 
 def render_setores(setores: gpd.GeoDataFrame | None, selected_bairros: list[str]) -> None:
-    """Render the census-sector analysis tab."""
-    st.header("Setores censitários")
+    """Render the census-sector exploration tab."""
+    st.header("Explorar setores")
     st.info(
-        "A camada setorial é complementar e mais sensível à escala Landsat de 30 m. "
-        "O ranking principal usa apenas setores com quality_flag_setor = ok."
+        "Setores censitários oferecem maior detalhe espacial, mas podem ser mais sensíveis "
+        "à resolução Landsat de 30 m. O ranking principal considera apenas setores com "
+        "quality_flag_setor = ok."
     )
 
     if setores is None:
@@ -367,32 +405,37 @@ def render_setores(setores: gpd.GeoDataFrame | None, selected_bairros: list[str]
 
     bairro_options = sorted(setores["bairro_nome_title"].dropna().unique().tolist())
     default_bairros = [bairro for bairro in selected_bairros if bairro in bairro_options]
-    sector_bairros = st.multiselect(
-        "Filtrar setores por bairro",
-        options=bairro_options,
-        default=default_bairros,
-        key="setores_bairros",
-    )
+    filter_cols = st.columns(3)
 
-    flag_option = st.radio(
-        "Qualidade dos setores",
-        options=[
-            "Todos os setores",
-            "Apenas setores ok",
-            "Setores com cautela",
-            "Setores inválidos",
-        ],
-        horizontal=True,
-        key="setores_flag",
-    )
+    with filter_cols[0]:
+        sector_bairros = st.multiselect(
+            "Bairro",
+            options=bairro_options,
+            default=default_bairros,
+            key="setores_bairros",
+        )
+    with filter_cols[1]:
+        flag_options = sorted(setores["quality_flag_setor"].dropna().unique().tolist())
+        selected_flags = st.multiselect(
+            "quality_flag_setor",
+            options=flag_options,
+            default=["ok"] if "ok" in flag_options else flag_options,
+            key="setores_flags",
+        )
+    with filter_cols[2]:
+        class_options = sorted(setores["utvi_setor_class"].dropna().unique().tolist())
+        selected_classes = st.multiselect(
+            "Classe UTVI",
+            options=class_options,
+            default=class_options,
+            key="setores_classes",
+        )
 
     data = filter_by_bairros(setores, sector_bairros)
-    if flag_option == "Apenas setores ok":
-        data = data[data["quality_flag_setor"].eq("ok")]
-    elif flag_option == "Setores com cautela":
-        data = data[data["quality_flag_setor"].isin(["caution_low_lst_valid", "caution_small_sector"])]
-    elif flag_option == "Setores inválidos":
-        data = data[data["quality_flag_setor"].eq("invalid_no_lst")]
+    if selected_flags:
+        data = data[data["quality_flag_setor"].isin(selected_flags)]
+    if selected_classes:
+        data = data[data["utvi_setor_class"].isin(selected_classes)]
 
     variable = st.selectbox(
         "Variável do mapa setorial",
@@ -404,89 +447,43 @@ def render_setores(setores: gpd.GeoDataFrame | None, selected_bairros: list[str]
         data,
         variable=variable,
         variable_label=SETORES_MAP_VARIABLES[variable],
-        tooltip_fields=[
-            "CD_SETOR",
-            "bairro_nome_title",
-            variable,
-            "utvi_setor_exploratory",
-            "utvi_setor_class",
-            "LST_C_median_mean",
-            "NDVI_median_mean",
-            "pct_urbana_land",
-            "pct_lst_valid_land",
-            "quality_flag_setor",
-        ],
+        tooltip_fields=SETORES_TOOLTIP_FIELDS,
         map_key=f"setores_{variable}_map",
     )
 
-    st.markdown("### Top 20 setores válidos por UTVI")
+    st.markdown("### Ranking top 20 setores válidos")
     valid_ranking = (
         data[data["quality_flag_setor"].eq("ok")]
         .sort_values("utvi_setor_exploratory", ascending=False)
         .head(20)
     )
     st.dataframe(
-        valid_ranking[
-            existing_columns(
-                valid_ranking,
-                [
-                    "utvi_setor_rank",
-                    "CD_SETOR",
-                    "bairro_nome_title",
-                    "utvi_setor_exploratory",
-                    "utvi_setor_class",
-                    "quality_flag_setor",
-                    "LST_C_median_mean",
-                    "NDVI_median_mean",
-                    "pct_urbana_land",
-                    "pct_lst_valid_land",
-                ],
-            )
-        ],
+        friendly_table(valid_ranking, SETORES_TABLE_COLUMNS),
         width="stretch",
         hide_index=True,
     )
 
-    st.markdown("### Tabela setorial")
-    sector_table_columns = [
-        "CD_SETOR",
-        "bairro_nome_title",
-        "utvi_setor_exploratory",
-        "utvi_setor_class",
-        "quality_flag_setor",
-        "LST_C_median_mean",
-        "NDVI_median_mean",
-        "pct_urbana_land",
-        "pct_lst_valid_land",
-    ]
+    st.markdown("### Tabela setorial filtrada")
+    table_data = data.sort_values("utvi_setor_exploratory", ascending=False, na_position="last")
     st.dataframe(
-        data[existing_columns(data, sector_table_columns)].sort_values(
-            "utvi_setor_exploratory", ascending=False, na_position="last"
-        ),
+        friendly_table(table_data, SETORES_TABLE_COLUMNS),
         width="stretch",
         hide_index=True,
+    )
+    download_table(
+        table_data[existing_columns(table_data, SETORES_TABLE_COLUMNS)],
+        "geoclimate_poa_setores_filtrados.csv",
+        "Baixar tabela de setores em CSV",
     )
 
 
 def render_indicators(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | None) -> None:
     """Render comparative indicator charts."""
     st.header("Indicadores")
+    st.caption("Gráficos sintéticos para apoiar a leitura do mapa e dos rankings.")
 
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(
-            make_scatter(
-                bairros,
-                x="utvi_exploratory",
-                y="NDVI_median_mean",
-                hover_name="bairro_nome_title",
-                color="utvi_class",
-                labels=LABELS,
-                hover_data=["LST_C_median_mean", "pct_urbana_land", "quality_flag"],
-                title="UTVI × NDVI por bairro",
-            ),
-            width="stretch",
-        )
         st.plotly_chart(
             make_scatter(
                 bairros,
@@ -496,9 +493,10 @@ def render_indicators(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | Non
                 color="utvi_class",
                 labels=LABELS,
                 hover_data=["utvi_exploratory", "pct_urbana_land", "quality_flag"],
-                title="LST × NDVI por bairro",
+                title="Temperatura de superfície × vegetação por bairro",
             ),
             width="stretch",
+            key="indicadores_lst_ndvi_chart",
         )
     with right:
         st.plotly_chart(
@@ -510,19 +508,25 @@ def render_indicators(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | Non
                 color="utvi_class",
                 labels=LABELS,
                 hover_data=["LST_C_median_mean", "NDVI_median_mean", "quality_flag"],
-                title="UTVI × % urbano por bairro",
+                title="UTVI × área urbana por bairro",
             ),
             width="stretch",
+            key="indicadores_utvi_urbano_chart",
         )
-        st.plotly_chart(
-            make_histogram(
-                bairros,
-                x="utvi_exploratory",
-                title="Distribuição do UTVI por bairros",
-                labels=LABELS,
-            ),
-            width="stretch",
-        )
+
+    st.plotly_chart(
+        make_bar_ranking(
+            bairros,
+            label_col="bairro_nome_title",
+            value_col="utvi_exploratory",
+            title="Top 15 bairros por UTVI",
+            labels=LABELS,
+            top_n=15,
+            hover_data=["LST_C_median_mean", "NDVI_median_mean", "pct_urbana_land", "quality_flag"],
+        ),
+        width="stretch",
+        key="indicadores_top15_bairros_chart",
+    )
 
     if setores is not None:
         setores_ok = setores[setores["quality_flag_setor"].eq("ok")]
@@ -530,11 +534,12 @@ def render_indicators(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | Non
             make_histogram(
                 setores_ok,
                 x="utvi_setor_exploratory",
-                title="Distribuição do UTVI por setores ok",
+                title="Distribuição de UTVI nos setores ok",
                 labels=LABELS,
                 nbins=35,
             ),
             width="stretch",
+            key="indicadores_setores_ok_hist_chart",
         )
     else:
         st.warning("Histograma setorial indisponível porque a camada de setores não foi carregada.")
@@ -543,35 +548,56 @@ def render_indicators(bairros: gpd.GeoDataFrame, setores: gpd.GeoDataFrame | Non
 def render_methodology() -> None:
     """Render the methodology tab."""
     st.header("Metodologia")
-    st.markdown(
-        """
-        **Período analisado:** `2023-12-01` a `2024-03-31`.
-
-        **Dados e indicadores:** o processamento usa Landsat 8/9 Collection 2 Level 2,
-        temperatura de superfície em °C (`LST_C`), índices espectrais `NDVI`, `NDBI`
-        e `MNDWI`, e MapBiomas Collection 10 para o ano de 2023.
-
-        **Unidade principal do MVP:** bairros oficiais de Porto Alegre. A camada de
-        setores censitários é complementar e permite observar variações internas aos
-        bairros, mas exige cautela por causa da resolução Landsat de 30 m.
-
-        **Fórmula do índice exploratório:**
-
-        ```text
-        UTVI = mean(LST_median_norm, LST_p75_norm, urban_norm, NDBI_norm, NDVI_inverse_norm)
-        ```
-
-        O UTVI é uma métrica exploratória para diagnóstico e priorização inicial.
-        Ele não é um indicador oficial de risco climático, vulnerabilidade social ou
-        saúde pública.
-
-        **Flags de qualidade:**
-
-        - `quality_flag`: flag dos bairros, baseada principalmente na cobertura válida de LST.
-        - `quality_flag_setor`: flag dos setores, com categorias `ok`,
-          `caution_low_lst_valid`, `caution_small_sector` e `invalid_no_lst`.
-        """
+    st.warning(
+        "O UTVI é exploratório e não representa um indicador oficial de risco climático "
+        "ou vulnerabilidade social."
     )
+
+    with st.expander("Dados usados", expanded=True):
+        st.markdown(
+            """
+            - Período analisado: `2023-12-01` a `2024-03-31`.
+            - Landsat 8/9 Collection 2 Level 2.
+            - Temperatura de superfície em °C (`LST_C`).
+            - Índices espectrais `NDVI`, `NDBI` e `MNDWI`.
+            - MapBiomas Collection 10, ano 2023.
+            - Bairros oficiais como unidade principal.
+            - Setores censitários como camada complementar.
+            """
+        )
+
+    with st.expander("Fórmula do índice"):
+        st.markdown(
+            """
+            ```text
+            UTVI = mean(LST_median_norm, LST_p75_norm, urban_norm, NDBI_norm, NDVI_inverse_norm)
+            ```
+
+            Temperaturas mais altas, maior urbanização e maior NDBI aumentam o índice.
+            Maior NDVI reduz o índice por meio do componente invertido.
+            """
+        )
+
+    with st.expander("Interpretação das quality flags"):
+        st.markdown(
+            """
+            - `quality_flag`: flag dos bairros, baseada principalmente na cobertura válida de LST.
+            - `quality_flag_setor = ok`: setor apto ao ranking exploratório principal.
+            - `caution_low_lst_valid`: baixa cobertura válida de LST.
+            - `caution_small_sector`: setor pequeno ou com poucos pixels Landsat.
+            - `invalid_no_lst`: setor sem LST válida; não entra no ranking principal.
+            """
+        )
+
+    with st.expander("Limitações"):
+        st.markdown(
+            """
+            - O UTVI não incorpora população, renda, idade, saúde ou outras dimensões sociais.
+            - A resolução Landsat de 30 m pode gerar instabilidade em setores pequenos.
+            - O dashboard compara padrões espaciais do período analisado; não substitui análise
+              climática, epidemiológica ou socioeconômica dedicada.
+            """
+        )
 
 
 def main() -> None:
@@ -610,7 +636,7 @@ def main() -> None:
         )
 
     tab_overview, tab_bairros, tab_setores, tab_indicators, tab_methodology = st.tabs(
-        ["Visão geral", "Bairros", "Setores censitários", "Indicadores", "Metodologia"]
+        ["Visão geral", "Explorar bairros", "Explorar setores", "Indicadores", "Metodologia"]
     )
 
     with tab_overview:
