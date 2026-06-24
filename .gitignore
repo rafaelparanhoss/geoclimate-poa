@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# VS Code
+.vscode/
+
+# Environment files
+.env
+.env.*
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Data and heavy geospatial outputs
+data/raw/*
+data/interim/*
+data/processed/*
+outputs/figures/*
+outputs/maps/*
+outputs/tables/*
+
+!data/raw/README.md
+!data/interim/README.md
+!data/processed/README.md
+!outputs/figures/.gitkeep
+!outputs/maps/.gitkeep
+!outputs/tables/.gitkeep
+
+# Common geospatial sidecar and raster files
+*.tif
+*.tiff
+*.vrt
+*.img
+*.jp2
+*.gpkg
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.qmd
+*.parquet
+*.geoparquet
+
+# OS files
+.DS_Store
+Thumbs.db
+
